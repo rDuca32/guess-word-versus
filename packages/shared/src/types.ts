@@ -12,12 +12,14 @@ export type Room = {
   status: RoomStatus;
   players: Player[];
   secretWord?: string;
+  guessesByPlayer?: Record<string, string[]>;
+  winnerId?: string;
   startedAt?: number;
   endsAt?: number;
 };
 
 export type LetterState = "correct" | "present" | "absent";
-export type GuessFeedback = { letters: LetterState[] };
+export type GuessFeedback = { letters: LetterState[]; guess: string };
 
 export type ServerToClientEvents = {
   "room:created": (payload: { roomCode: string; playerId: string }) => void;
