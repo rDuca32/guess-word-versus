@@ -2,10 +2,10 @@
   "name": "guess-word-versus",
   "private": true,
   "devDependencies": {
-    "concurrently": "^9.0.0"
+    "concurrently": "^9.2.1"
   },
   "scripts": {
-    "dev": "concurrently -n WEB,SERVER,SHARED -c auto \"pnpm --filter shared dev\" \"pnpm --filter server start:dev\" \"pnpm --filter web dev\"",
+    "dev": "concurrently -k -n SHARED,SERVER,WEB -c auto \"pnpm --filter shared dev\" \"pnpm --filter server start:dev\" \"pnpm --filter web dev\"",
     "build": "pnpm --filter shared build && pnpm --filter server build && pnpm --filter web build"
   }
 }

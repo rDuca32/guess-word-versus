@@ -9,12 +9,9 @@ import { Server, Socket } from "socket.io";
 import { RoomManager } from "./room.manager";
 import { makeRoomCode, nowMs } from "./utils";
 
-import type {
-    Room,
-    Player,
-    ClientToServerEvents,
-    ServerToClientEvents,
-} from "shared";
+import type { Room, Player, ClientToServerEvents, ServerToClientEvents } from "shared";
+import type { LetterState } from "shared";
+import { wordleFeedback } from "./wordle-feedback";
 
 type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 type TypedServer = Server<ClientToServerEvents, ServerToClientEvents>;
@@ -22,10 +19,7 @@ type TypedServer = Server<ClientToServerEvents, ServerToClientEvents>;
 const GAME_SECONDS = 90;
 
 @WebSocketGateway({
-    cors: {
-        origin: "http://localhost:3000",
-        credentials: true,
-    },
+    cors: { origin: "http://localhost:3000", credentials: true },
 })
 export class GameGateway {
     @WebSocketServer()
@@ -34,8 +28,11 @@ export class GameGateway {
     private roomManager = new RoomManager();
 
     private tickInterval = setInterval(() => {
-        for (const room of (this as any).roomManager["rooms"].values() as Iterable<Room>) {
+        // iterate rooms safely
+        const rooms: Iterable<Room> = (this as any).roomManager?.rooms?.values?.() ?? [];
+        for (const room of rooms) {
             if (room.status !== "playing" || !room.endsAt) continue;
+
             const remainingMs = room.endsAt - nowMs();
             if (remainingMs <= 0) {
                 room.status = "ended";
@@ -50,7 +47,9 @@ export class GameGateway {
 
     private emitState(room: Room) {
         const timerRemaining =
-            room.status === "playing" && room.endsAt ? Math.max(0, Math.ceil((room.endsAt - nowMs()) / 1000)) : undefined;
+            room.status === "playing" && room.endsAt
+                ? Math.max(0, Math.ceil((room.endsAt - nowMs()) / 1000))
+                : undefined;
 
         this.server.to(room.code).emit("game:state", {
             roomCode: room.code,
@@ -79,6 +78,7 @@ export class GameGateway {
             code,
             status: "lobby",
             players: [player],
+            guessesByPlayer: {},
         };
 
         this.roomManager.createRoom(room);
@@ -108,13 +108,20 @@ export class GameGateway {
         };
 
         room.players.push(player);
+        room.guessesByPlayer ??= {};
         this.roomManager.updateRoom(room.code, room);
 
         socket.join(room.code);
-
         socket.emit("room:joined", { roomCode: room.code, playerId: player.id });
 
         if (room.players.length === 2 && room.status === "lobby") {
+            if (typeof (this.roomManager as any).startGame === "function") {
+                (this.roomManager as any).startGame(room);
+            } else {
+                room.secretWord = room.secretWord;
+                room.guessesByPlayer = { [room.players[0].id]: [], [room.players[1].id]: [] };
+            }
+
             room.status = "playing";
             room.startedAt = nowMs();
             room.endsAt = room.startedAt + GAME_SECONDS * 1000;
@@ -125,7 +132,8 @@ export class GameGateway {
     }
 
     handleDisconnect(socket: TypedSocket) {
-        for (const room of (this as any).roomManager["rooms"].values() as Iterable<Room>) {
+        const rooms: Iterable<Room> = (this as any).roomManager?.rooms?.values?.() ?? [];
+        for (const room of rooms) {
             const idx = room.players.findIndex((p) => p.socketId === socket.id);
             if (idx === -1) continue;
 
@@ -143,5 +151,52 @@ export class GameGateway {
             this.emitState(room);
             break;
         }
+    }
+
+    @SubscribeMessage("game:guess")
+    handleGuess(
+        @MessageBody() data: { roomCode: string; playerId: string; guess: string },
+        @ConnectedSocket() client: TypedSocket
+    ) {
+        const roomCode = (data?.roomCode ?? "").trim().toUpperCase();
+        const playerId = (data?.playerId ?? "").trim();
+        const guess = (data?.guess ?? "").trim().toUpperCase();
+
+        const room = this.roomManager.getRoom(roomCode);
+        if (!room) return client.emit("error", { message: "Room not found." });
+
+        if (!room.players.some((p) => p.id === playerId))
+            return client.emit("error", { message: "Player not in room." });
+
+        if (room.status !== "playing")
+            return client.emit("error", { message: "Game is not playing." });
+
+        if (!/^[A-Z]{5}$/.test(guess))
+            return client.emit("error", { message: "Guess must be exactly 5 letters (A-Z)." });
+
+        room.guessesByPlayer ??= {};
+        const tries = room.guessesByPlayer[playerId] ?? [];
+        if (tries.length >= 6)
+            return client.emit("error", { message: "No attempts left." });
+
+        if (!room.secretWord)
+            return client.emit("error", { message: "Server error: secret word missing." });
+
+        const letters: LetterState[] = wordleFeedback(room.secretWord.toUpperCase(), guess);
+
+        room.guessesByPlayer[playerId] = [...tries, guess];
+        this.roomManager.updateRoom(room.code, room);
+
+        client.emit("game:feedback", { feedback: { letters, guess } });
+
+        const isCorrect = letters.every((x) => x === "correct");
+        if (isCorrect) {
+            room.status = "ended";
+            room.winnerId = playerId;
+            this.roomManager.updateRoom(room.code, room);
+            this.server.to(roomCode).emit("game:ended", { winnerId: playerId, reason: "guessed" });
+        }
+
+        this.emitState(room);
     }
 }

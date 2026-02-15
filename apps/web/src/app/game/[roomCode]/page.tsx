@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { getSocket } from "@/lib/socket";
+
+type LetterState = "correct" | "present" | "absent";
 
 type GameStatePayload = {
     roomCode: string;
@@ -11,53 +13,194 @@ type GameStatePayload = {
     timerRemaining?: number;
 };
 
+type FeedbackRow = { guess: string; feedback: LetterState[] };
+
+const COLORS: Record<LetterState, string> = {
+    correct: "#6aaa64",
+    present: "#c9b458",
+    absent: "#787c7e",
+};
+
 export default function GameRoom() {
     const params = useParams<{ roomCode: string }>();
-    const roomCode = useMemo(() => (params?.roomCode ?? "").toString().toUpperCase(), [params]);
+    const roomCode = useMemo(
+        () => (params?.roomCode ?? "").toString().toUpperCase(),
+        [params],
+    );
 
     const [state, setState] = useState<GameStatePayload | null>(null);
     const [ended, setEnded] = useState<string | null>(null);
 
+    const [guess, setGuess] = useState("");
+    const [rows, setRows] = useState<FeedbackRow[]>([]);
+
     useEffect(() => {
         const s = getSocket();
-        s.on("game:state", (p: any) => setState(p));
-        s.on("game:ended", (p) => setEnded(`Game ended: ${p.reason}`));
-        s.on("error", (p) => setEnded(`Error: ${p.message}`));
+
+        const onState = (p: any) => setState(p);
+        const onEnded = (p: any) => setEnded(`Game ended: ${p.reason}`);
+        const onErr = (p: any) => setEnded(`Error: ${p.message}`);
+
+        const onFeedback = (payload: { feedback: { letters: LetterState[]; guess: string } }) => {
+            const g = payload.feedback.guess ?? "";
+            setRows((prev) => [...prev, { guess: g.toUpperCase(), feedback: payload.feedback.letters }]);
+        };
+
+        s.on("game:state", onState);
+        s.on("game:ended", onEnded);
+        s.on("error", onErr);
+        s.on("game:feedback", onFeedback);
 
         return () => {
-            s.off("game:state");
-            s.off("game:ended");
-            s.off("error");
+            s.off("game:state", onState);
+            s.off("game:ended", onEnded);
+            s.off("error", onErr);
+            s.off("game:feedback", onFeedback);
         };
     }, []);
 
+    const canPlay = state?.status === "playing" && !ended;
+    const attemptsLeft = Math.max(0, 6 - rows.length);
+
+    const handleChange = (value: string) => {
+        const cleaned = value.replace(/[^a-zA-Z]/g, "").toUpperCase().slice(0, 5);
+        setGuess(cleaned);
+    };
+
+    const submitGuess = () => {
+        if (!canPlay) return;
+        if (guess.length !== 5) return;
+        if (rows.length >= 6) return;
+
+        const playerId = localStorage.getItem("playerId");
+        if (!playerId) {
+            setEnded("Error: missing playerId (go back and re-join from lobby).");
+            return;
+        }
+
+        getSocket().emit("game:guess", { roomCode, playerId, guess });
+        setGuess("");
+    };
+
+    const grid: Array<{ guess: string; feedback: LetterState[] | null; isCurrent?: boolean }> = rows.map((r) => ({
+        guess: r.guess,
+        feedback: r.feedback,
+    }));
+
+    if (grid.length < 6) {
+        grid.push({ guess, feedback: null, isCurrent: true });
+    }
+    while (grid.length < 6) {
+        grid.push({ guess: "", feedback: null });
+    }
+
     return (
-        <main style={{ maxWidth: 700, margin: "40px auto", padding: 16 }}>
-            <h1 style={{ fontSize: 24, fontWeight: 700 }}>Room {roomCode}</h1>
-
-            {!state ? (
-                <p>Loading state…</p>
-            ) : (
-                <>
-                    <p>Status: <b>{state.status}</b></p>
-                    {typeof state.timerRemaining === "number" && (
-                        <p>Timer: <b>{state.timerRemaining}s</b></p>
+        <main style={{ maxWidth: 720, margin: "40px auto", padding: 16 }}>
+            <header style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+                <h1 style={{ fontSize: 24, fontWeight: 800 }}>Room {roomCode}</h1>
+                <div style={{ textAlign: "right", fontSize: 14, opacity: 0.9 }}>
+                    <div>Status: <b>{state?.status ?? "loading"}</b></div>
+                    {typeof state?.timerRemaining === "number" && (
+                        <div>Timer: <b>{state.timerRemaining}s</b></div>
                     )}
+                </div>
+            </header>
 
-                    <h3 style={{ marginTop: 18 }}>Players</h3>
-                    <ul>
-                        {state.players.map((p) => (
-                            <li key={p.id}>
-                                {p.name} — wins: {p.score}
-                            </li>
-                        ))}
-                    </ul>
+            <section style={{ marginTop: 14 }}>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {state?.players?.map((p) => (
+                        <div
+                            key={p.id}
+                            style={{
+                                border: "1px solid #ddd",
+                                borderRadius: 10,
+                                padding: "6px 10px",
+                                fontSize: 14,
+                            }}
+                        >
+                            <b>{p.name}</b> · wins {p.score}
+                        </div>
+                    ))}
+                </div>
+                {state?.status === "lobby" && <p style={{ marginTop: 10, opacity: 0.85 }}>Waiting for second player…</p>}
+            </section>
 
-                    {state.status === "lobby" && <p>Waiting for second player…</p>}
-                </>
-            )}
+            <section style={{ marginTop: 18, display: "grid", gap: 8, justifyContent: "center" }}>
+                {grid.map((r, rowIdx) => (
+                    <div key={rowIdx} style={{ display: "grid", gridTemplateColumns: "repeat(5, 52px)", gap: 8 }}>
+                        {Array.from({ length: 5 }).map((_, colIdx) => {
+                            const letter = (r.guess[colIdx] ?? "").toUpperCase();
+                            const cellState = r.feedback ? r.feedback[colIdx] : null;
 
-            {ended && <p style={{ marginTop: 16, color: "crimson" }}>{ended}</p>}
+                            return (
+                                <div
+                                    key={colIdx}
+                                    style={{
+                                        width: 52,
+                                        height: 52,
+                                        border: "2px solid #d3d6da",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        fontSize: 22,
+                                        fontWeight: 800,
+                                        background: cellState ? COLORS[cellState] : "white",
+                                        color: cellState ? "white" : "#111",
+                                        borderColor: cellState ? COLORS[cellState] : (r.isCurrent && canPlay ? "#999" : "#d3d6da"),
+                                        userSelect: "none",
+                                    }}
+                                >
+                                    {letter}
+                                </div>
+                            );
+                        })}
+                    </div>
+                ))}
+            </section>
+
+            <section style={{ marginTop: 18, display: "flex", justifyContent: "center" }}>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                    <input
+                        value={guess}
+                        onChange={(e) => handleChange(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                e.preventDefault();
+                                submitGuess();
+                            }
+                        }}
+                        disabled={!canPlay || rows.length >= 6}
+                        placeholder={canPlay ? "Type 5 letters" : "Waiting…"}
+                        style={{
+                            width: 220,
+                            padding: "10px 12px",
+                            borderRadius: 10,
+                            border: "1px solid #ddd",
+                            fontSize: 16,
+                            letterSpacing: 2,
+                            textTransform: "uppercase",
+                        }}
+                    />
+                    <button
+                        onClick={submitGuess}
+                        disabled={!canPlay || guess.length !== 5 || rows.length >= 6}
+                        style={{
+                            padding: "10px 14px",
+                            borderRadius: 10,
+                            border: "1px solid #ddd",
+                            fontWeight: 700,
+                        }}
+                    >
+                        Guess
+                    </button>
+                </div>
+            </section>
+
+            <section style={{ marginTop: 12, textAlign: "center", opacity: 0.85, fontSize: 14 }}>
+                Attempts left: <b>{attemptsLeft}</b>
+            </section>
+
+            {ended && <p style={{ marginTop: 16, color: "crimson", textAlign: "center" }}>{ended}</p>}
         </main>
     );
 }
