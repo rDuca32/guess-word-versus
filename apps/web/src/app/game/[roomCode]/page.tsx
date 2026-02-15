@@ -82,7 +82,6 @@ export default function GameRoom() {
         setGuess("");
     };
 
-    // Build a fixed 6-row grid: existing rows + current typing row + empty rows
     const grid: Array<{ guess: string; feedback: LetterState[] | null; isCurrent?: boolean }> = rows.map((r) => ({
         guess: r.guess,
         feedback: r.feedback,
@@ -126,7 +125,6 @@ export default function GameRoom() {
                 {state?.status === "lobby" && <p style={{ marginTop: 10, opacity: 0.85 }}>Waiting for second player…</p>}
             </section>
 
-            {/* Wordle-like grid */}
             <section style={{ marginTop: 18, display: "grid", gap: 8, justifyContent: "center" }}>
                 {grid.map((r, rowIdx) => (
                     <div key={rowIdx} style={{ display: "grid", gridTemplateColumns: "repeat(5, 52px)", gap: 8 }}>
@@ -160,7 +158,6 @@ export default function GameRoom() {
                 ))}
             </section>
 
-            {/* Input (visible, simple) */}
             <section style={{ marginTop: 18, display: "flex", justifyContent: "center" }}>
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                     <input

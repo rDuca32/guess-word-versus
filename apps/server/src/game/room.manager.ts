@@ -43,7 +43,7 @@ export class RoomManager {
 
     startGame(room: Room) {
         room.secretWord = this.getRandomWord();
-        room.guessesByPlayer = {};
+        room.guessesByPlayer = Object.fromEntries(room.players.map(p => [p.id, []]));
         room.status = "playing";
         room.winnerId = undefined;
     }
