@@ -1,0 +1,29 @@
+# dependencies
+node_modules
+**/node_modules
+
+# env
+.env
+**/.env
+
+# Next.js
+apps/web/.next
+apps/web/out
+
+# build
+dist
+**/dist
+build
+**/build
+
+# logs
+*.log
+
+# OS / editor
+.DS_Store
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# Prisma
+apps/server/prisma/dev.db

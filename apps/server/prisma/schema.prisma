@@ -1,0 +1,21 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Match {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  winnerId  String?
+  roomCode  String
+}
+
+model PlayerScore {
+  id   String @id @default(cuid())
+  name String @unique
+  wins Int    @default(0)
+}
