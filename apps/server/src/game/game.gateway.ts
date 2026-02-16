@@ -4,6 +4,7 @@ import {
     SubscribeMessage,
     MessageBody,
     ConnectedSocket,
+    OnGatewayDisconnect,
 } from "@nestjs/websockets";
 import { Server, Socket } from "socket.io";
 import { RoomManager } from "./room.manager";
@@ -21,14 +22,13 @@ const GAME_SECONDS = 90;
 @WebSocketGateway({
     cors: { origin: "http://localhost:3000", credentials: true },
 })
-export class GameGateway {
+export class GameGateway implements OnGatewayDisconnect {
     @WebSocketServer()
     server!: TypedServer;
 
     private roomManager = new RoomManager();
 
     private tickInterval = setInterval(() => {
-        // iterate rooms safely
         const rooms: Iterable<Room> = (this as any).roomManager?.rooms?.values?.() ?? [];
         for (const room of rooms) {
             if (room.status !== "playing" || !room.endsAt) continue;
@@ -118,7 +118,7 @@ export class GameGateway {
             if (typeof (this.roomManager as any).startGame === "function") {
                 (this.roomManager as any).startGame(room);
             } else {
-                room.secretWord = room.secretWord;
+                room.secretWord = room.secretWord || "apple";
                 room.guessesByPlayer = { [room.players[0].id]: [], [room.players[1].id]: [] };
             }
 
@@ -171,7 +171,7 @@ export class GameGateway {
         if (room.status !== "playing")
             return client.emit("error", { message: "Game is not playing." });
 
-        if (!/^[A-Z]{5}$/.test(guess))
+        if (!/^[A-Za-z]{5}$/.test(guess))
             return client.emit("error", { message: "Guess must be exactly 5 letters (A-Z)." });
 
         room.guessesByPlayer ??= {};

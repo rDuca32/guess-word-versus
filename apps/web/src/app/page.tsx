@@ -13,15 +13,15 @@ export default function Home() {
   useEffect(() => {
     const s = getSocket();
 
-    s.on("error", (p) => setErr(p.message));
+    s.on("error", (p: { message: string }) => setErr(p.message));
 
-    s.on("room:created", ({ roomCode, playerId }) => {
-      localStorage.setItem("playerId", playerId);
+    s.on("room:created", ({ roomCode, playerId }: { roomCode: string; playerId: string }) => {
+      sessionStorage.setItem("playerId", playerId);
       router.push(`/game/${roomCode}`);
     });
 
-    s.on("room:joined", ({ roomCode, playerId }) => {
-      localStorage.setItem("playerId", playerId);
+    s.on("room:joined", ({ roomCode, playerId }: { roomCode: string; playerId: string }) => {
+      sessionStorage.setItem("playerId", playerId);
       router.push(`/game/${roomCode}`);
     });
 

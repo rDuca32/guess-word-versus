@@ -72,7 +72,7 @@ export default function GameRoom() {
         if (guess.length !== 5) return;
         if (rows.length >= 6) return;
 
-        const playerId = localStorage.getItem("playerId");
+        const playerId = sessionStorage.getItem("playerId");
         if (!playerId) {
             setEnded("Error: missing playerId (go back and re-join from lobby).");
             return;
