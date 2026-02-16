@@ -16,12 +16,12 @@ export default function Home() {
     s.on("error", (p: { message: string }) => setErr(p.message));
 
     s.on("room:created", ({ roomCode, playerId }: { roomCode: string; playerId: string }) => {
-      sessionStorage.setItem("playerId", playerId);
+      sessionStorage.setItem(`playerId:${roomCode}`, playerId);
       router.push(`/game/${roomCode}`);
     });
 
     s.on("room:joined", ({ roomCode, playerId }: { roomCode: string; playerId: string }) => {
-      sessionStorage.setItem("playerId", playerId);
+      sessionStorage.setItem(`playerId:${roomCode}`, playerId);
       router.push(`/game/${roomCode}`);
     });
 

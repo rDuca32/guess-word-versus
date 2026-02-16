@@ -56,6 +56,7 @@ export class GameGateway implements OnGatewayDisconnect {
             status: room.status,
             players: room.players.map((p) => ({ id: p.id, name: p.name, score: p.score })),
             timerRemaining,
+            rematchVotes: room.rematchVotes ?? [],
         });
     }
 
@@ -79,6 +80,7 @@ export class GameGateway implements OnGatewayDisconnect {
             status: "lobby",
             players: [player],
             guessesByPlayer: {},
+            rematchVotes: [],
         };
 
         this.roomManager.createRoom(room);
@@ -109,6 +111,7 @@ export class GameGateway implements OnGatewayDisconnect {
 
         room.players.push(player);
         room.guessesByPlayer ??= {};
+        room.rematchVotes = [];
         this.roomManager.updateRoom(room.code, room);
 
         socket.join(room.code);
@@ -191,12 +194,45 @@ export class GameGateway implements OnGatewayDisconnect {
 
         const isCorrect = letters.every((x) => x === "correct");
         if (isCorrect) {
-            room.status = "ended";
             room.winnerId = playerId;
+
+            const winner = room.players.find(p => p.id === playerId);
+            if (winner) {
+                winner.score += 1;
+            }
+
+            room.status = "ended";
             this.roomManager.updateRoom(room.code, room);
-            this.server.to(roomCode).emit("game:ended", { winnerId: playerId, reason: "guessed" });
+            this.server.to(room.code).emit("game:ended", { reason: "guessed", winnerId: playerId });
+        }
+        this.emitState(room);
+    }
+
+    @SubscribeMessage("game:rematch")
+    handleRematch(
+        @MessageBody() data: { roomCode: string; playerId: string },
+        @ConnectedSocket() client: TypedSocket
+    ) {
+        const roomCode = (data?.roomCode ?? "").trim().toUpperCase();
+        const room = this.roomManager.getRoom(roomCode);
+
+        if (!room) return client.emit("error", { message: "Room not found." });
+        if (room.status !== "ended") return;
+
+        room.rematchVotes ??= [];
+        if (!room.rematchVotes.includes(data.playerId)) {
+            room.rematchVotes.push(data.playerId);
         }
 
+        if (room.players.length === 2 && room.rematchVotes.length >= 2) {
+            this.roomManager.startGame(room);
+            room.status = "playing";
+            room.startedAt = nowMs();
+            room.endsAt = room.startedAt + GAME_SECONDS * 1000;
+            room.rematchVotes = [];
+        }
+
+        this.roomManager.updateRoom(room.code, room);
         this.emitState(room);
     }
 }

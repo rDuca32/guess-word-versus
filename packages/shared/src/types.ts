@@ -16,6 +16,7 @@ export type Room = {
   winnerId?: string;
   startedAt?: number;
   endsAt?: number;
+  rematchVotes?: string[];
 };
 
 export type LetterState = "correct" | "present" | "absent";
