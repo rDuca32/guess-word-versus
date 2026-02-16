@@ -20,7 +20,7 @@ type TypedServer = Server<ClientToServerEvents, ServerToClientEvents>;
 const GAME_SECONDS = 90;
 
 @WebSocketGateway({
-    cors: { origin: "http://localhost:3000", credentials: true },
+    cors: { origin: true, credentials: true },
 })
 export class GameGateway implements OnGatewayDisconnect {
     @WebSocketServer()
