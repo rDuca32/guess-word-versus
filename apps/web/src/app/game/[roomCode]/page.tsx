@@ -22,6 +22,42 @@ const COLORS: Record<LetterState, string> = {
     absent: "#787c7e",
 };
 
+const KEY_ROWS = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"].map((r) => r.split(""));
+
+function Keyboard({ usedLetters }: { usedLetters: Set<string> }) {
+    return (
+        <div style={{ display: "grid", gap: 10, justifyContent: "center", marginTop: 20 }}>
+            {KEY_ROWS.map((row, idx) => (
+                <div key={idx} style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+                    {row.map((k) => {
+                        const used = usedLetters.has(k);
+                        return (
+                            <div
+                                key={k}
+                                style={{
+                                    height: 50,
+                                    minWidth: 35,
+                                    padding: "0 10px",
+                                    borderRadius: 10,
+                                    display: "grid",
+                                    placeItems: "center",
+                                    fontWeight: 1000,
+                                    border: "1px solid #222",
+                                    background: used ? "#d1d5db" : "#111",
+                                    color: used ? "#6b7280" : "white",
+                                    userSelect: "none",
+                                }}
+                            >
+                                {k}
+                            </div>
+                        );
+                    })}
+                </div>
+            ))}
+        </div>
+    );
+}
+
 export default function GameRoom() {
     const params = useParams<{ roomCode: string }>();
     const roomCode = useMemo(
@@ -35,9 +71,22 @@ export default function GameRoom() {
     const [guess, setGuess] = useState("");
     const [rows, setRows] = useState<FeedbackRow[]>([]);
 
+    const usedLetters = useMemo(() => {
+        const s = new Set<string>();
+        for (const r of rows) {
+            for (const ch of r.guess.toUpperCase()) {
+                if (ch >= "A" && ch <= "Z")
+                    s.add(ch);
+            }
+        }
+        return s;
+    }, [rows]);
+
     const prevStatusRef = useRef<GameStatePayload["status"] | null>(null);
 
     const [playerId, setPlayerId] = useState<string | null>(null);
+
+    const [revealWord, setRevealWord] = useState<string | null>(null);
 
     useEffect(() => {
         if (typeof window === "undefined") return;
@@ -57,6 +106,7 @@ export default function GameRoom() {
                 setEnded(null);
                 setRows([]);
                 setGuess("");
+                setRevealWord(null);
             }
 
             if (p.status === "ended" && prev === "playing") {
@@ -64,7 +114,12 @@ export default function GameRoom() {
             }
         };
 
-        const onEnded = (p: any) => setEnded(`Game ended: ${p.reason}`);
+        const onEnded = (p: { reason: string; secretWord?: string }) => {
+            const word = typeof p.secretWord === "string" ? p.secretWord.toUpperCase() : null;
+            setRevealWord(word);
+            setEnded(`Game ended: ${p.reason}`);
+        };
+
         const onErr = (p: any) => setEnded(`Error: ${p.message}`);
 
         const onFeedback = (payload: { feedback: { letters: LetterState[]; guess: string } }) => {
@@ -74,6 +129,7 @@ export default function GameRoom() {
             const isWin = payload.feedback.letters.every((l) => l === "correct");
             if (isWin) {
                 setEnded("You guessed the word!");
+                setRevealWord(g.toUpperCase());
             }
         };
 
@@ -233,6 +289,8 @@ export default function GameRoom() {
                 </div>
             </section>
 
+            <Keyboard usedLetters={usedLetters} />
+
             <section style={{ marginTop: 12, textAlign: "center", opacity: 0.85, fontSize: 14 }}>
                 Attempts left: <b>{attemptsLeft}</b>
             </section>
@@ -268,9 +326,14 @@ export default function GameRoom() {
                             </div>
                         </div>
 
-                        <p style={{ marginTop: 10, marginBottom: 14, opacity: 0.9 }}>
+                        <div style={{ marginTop: 10, marginBottom: 15, opacity: 0.5 }}>
                             {ended ?? "Game ended."}
-                        </p>
+                            {revealWord && (
+                                <p style={{ marginTop: 10, marginBottom: 5, opacity: 1 }}>
+                                    The word was: <b style={{ letterSpacing: 2 }}>{revealWord}</b>
+                                </p>
+                            )}
+                        </div>
 
                         <div
                             style={{

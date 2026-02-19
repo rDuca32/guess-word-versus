@@ -2,7 +2,8 @@
   "name": "guess-word-versus",
   "private": true,
   "devDependencies": {
-    "concurrently": "^9.2.1"
+    "concurrently": "^9.2.1",
+    "typescript": "^5.9.3"
   },
   "scripts": {
     "dev": "concurrently -k -n SHARED,SERVER,WEB -c auto \"pnpm --filter shared dev\" \"pnpm --filter server start:dev\" \"pnpm --filter web dev\"",

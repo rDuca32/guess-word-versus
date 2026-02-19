@@ -37,7 +37,7 @@ export class GameGateway implements OnGatewayDisconnect {
             if (remainingMs <= 0) {
                 room.status = "ended";
                 this.roomManager.updateRoom(room.code, room);
-                this.server.to(room.code).emit("game:ended", { reason: "timeout" });
+                this.server.to(room.code).emit("game:ended", { reason: "timeout", secretWord: room.secretWord });
                 this.emitState(room);
             } else {
                 this.emitState(room);
@@ -145,7 +145,7 @@ export class GameGateway implements OnGatewayDisconnect {
             if (room.status === "playing") {
                 room.status = "ended";
                 this.roomManager.updateRoom(room.code, room);
-                this.server.to(room.code).emit("game:ended", { reason: "left" });
+                this.server.to(room.code).emit("game:ended", { reason: "left", secretWord: room.secretWord });
             }
 
             if (room.players.length === 0) this.roomManager.deleteRoom(room.code);
@@ -203,7 +203,7 @@ export class GameGateway implements OnGatewayDisconnect {
 
             room.status = "ended";
             this.roomManager.updateRoom(room.code, room);
-            this.server.to(room.code).emit("game:ended", { reason: "guessed", winnerId: playerId });
+            this.server.to(room.code).emit("game:ended", { reason: "guessed", winnerId: playerId, secretWord: room.secretWord });
         }
         this.emitState(room);
     }

@@ -27,7 +27,7 @@ export type ServerToClientEvents = {
   "room:joined": (payload: { roomCode: string; playerId: string }) => void;
   "game:state": (payload: any) => void;
   "game:feedback": (payload: { feedback: GuessFeedback }) => void;
-  "game:ended": (payload: { winnerId?: string; reason: "guessed" | "timeout" | "left" }) => void;
+  "game:ended": (payload: { winnerId?: string; reason: "guessed" | "timeout" | "left"; secretWord?: string }) => void;
   "error": (payload: { message: string }) => void;
 };
 
