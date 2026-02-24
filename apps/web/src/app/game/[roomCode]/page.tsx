@@ -26,9 +26,9 @@ const KEY_ROWS = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"].map((r) => r.split(""));
 
 function Keyboard({ usedLetters }: { usedLetters: Set<string> }) {
     return (
-        <div style={{ display: "grid", gap: 10, justifyContent: "center", marginTop: 20 }}>
+        <div style={{ display: "grid", gap: 5, justifyContent: "center", marginTop: 10 }}>
             {KEY_ROWS.map((row, idx) => (
-                <div key={idx} style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+                <div key={idx} style={{ display: "flex", gap: 5, justifyContent: "center" }}>
                     {row.map((k) => {
                         const used = usedLetters.has(k);
                         return (
@@ -36,12 +36,12 @@ function Keyboard({ usedLetters }: { usedLetters: Set<string> }) {
                                 key={k}
                                 style={{
                                     height: 50,
-                                    minWidth: 35,
-                                    padding: "0 10px",
+                                    minWidth: 30,
+                                    padding: "10px",
                                     borderRadius: 10,
                                     display: "grid",
                                     placeItems: "center",
-                                    fontWeight: 1000,
+                                    fontWeight: 750,
                                     border: "1px solid #222",
                                     background: used ? "#d1d5db" : "#111",
                                     color: used ? "#6b7280" : "white",
@@ -188,10 +188,10 @@ export default function GameRoom() {
     }
 
     return (
-        <main style={{ maxWidth: 720, margin: "40px auto", padding: 16 }}>
-            <header style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
-                <h1 style={{ fontSize: 24, fontWeight: 800 }}>Room {roomCode}</h1>
-                <div style={{ textAlign: "right", fontSize: 14, opacity: 0.9 }}>
+        <main style={{ maxWidth: 700, margin: "30px auto", padding: 15 }}>
+            <header style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+                <h1 style={{ fontSize: 25, fontWeight: 750 }}>Room {roomCode}</h1>
+                <div style={{ textAlign: "right", fontSize: 15, opacity: 0.75 }}>
                     <div>Status: <b>{state?.status ?? "loading"}</b></div>
                     {typeof state?.timerRemaining === "number" && (
                         <div>Timer: <b>{state.timerRemaining}s</b></div>
@@ -199,28 +199,28 @@ export default function GameRoom() {
                 </div>
             </header>
 
-            <section style={{ marginTop: 14 }}>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <section style={{ marginTop: 15 }}>
+                <div style={{ display: "flex", gap: 7, flexWrap: "wrap" }}>
                     {state?.players?.map((p) => (
                         <div
                             key={p.id}
                             style={{
                                 border: "1px solid #ddd",
                                 borderRadius: 10,
-                                padding: "6px 10px",
-                                fontSize: 14,
+                                padding: "5px 10px",
+                                fontSize: 15,
                             }}
                         >
                             <b>{p.name}</b> · wins {p.score}
                         </div>
                     ))}
                 </div>
-                {state?.status === "lobby" && <p style={{ marginTop: 10, opacity: 0.85 }}>Waiting for second player…</p>}
+                {state?.status === "lobby" && <p style={{ marginTop: 10, opacity: 0.75 }}>Waiting for second player…</p>}
             </section>
 
-            <section style={{ marginTop: 18, display: "grid", gap: 8, justifyContent: "center" }}>
+            <section style={{ marginTop: 25, display: "grid", gap: 7, justifyContent: "center" }}>
                 {grid.map((r, rowIdx) => (
-                    <div key={rowIdx} style={{ display: "grid", gridTemplateColumns: "repeat(5, 52px)", gap: 8 }}>
+                    <div key={rowIdx} style={{ display: "grid", gridTemplateColumns: "repeat(5, 50px)", gap: 7 }}>
                         {Array.from({ length: 5 }).map((_, colIdx) => {
                             const letter = (r.guess[colIdx] ?? "").toUpperCase();
                             const cellState = r.feedback ? r.feedback[colIdx] : null;
@@ -229,14 +229,14 @@ export default function GameRoom() {
                                 <div
                                     key={colIdx}
                                     style={{
-                                        width: 52,
-                                        height: 52,
-                                        border: "2px solid #d3d6da",
+                                        width: 50,
+                                        height: 50,
+                                        border: "3px solid #d3d6da",
                                         display: "flex",
                                         alignItems: "center",
                                         justifyContent: "center",
-                                        fontSize: 22,
-                                        fontWeight: 800,
+                                        fontSize: 20,
+                                        fontWeight: 750,
                                         background: cellState ? COLORS[cellState] : "white",
                                         color: cellState ? "white" : "#111",
                                         borderColor: cellState ? COLORS[cellState] : (r.isCurrent && canPlay ? "#999" : "#d3d6da"),
@@ -251,7 +251,7 @@ export default function GameRoom() {
                 ))}
             </section>
 
-            <section style={{ marginTop: 18, display: "flex", justifyContent: "center" }}>
+            <section style={{ marginTop: 20, display: "flex", justifyContent: "center" }}>
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
                     <input
                         value={guess}
@@ -266,10 +266,10 @@ export default function GameRoom() {
                         placeholder={canPlay ? "Type 5 letters" : "Waiting…"}
                         style={{
                             width: 220,
-                            padding: "10px 12px",
+                            padding: "10px 15px",
                             borderRadius: 10,
                             border: "1px solid #ddd",
-                            fontSize: 16,
+                            fontSize: 15,
                             letterSpacing: 2,
                             textTransform: "uppercase",
                         }}
@@ -278,10 +278,10 @@ export default function GameRoom() {
                         onClick={submitGuess}
                         disabled={!canPlay || guess.length !== 5 || rows.length >= 6}
                         style={{
-                            padding: "10px 14px",
+                            padding: "10px 15px",
                             borderRadius: 10,
                             border: "1px solid #ddd",
-                            fontWeight: 700,
+                            fontWeight: 750,
                         }}
                     >
                         Guess
@@ -291,11 +291,11 @@ export default function GameRoom() {
 
             <Keyboard usedLetters={usedLetters} />
 
-            <section style={{ marginTop: 12, textAlign: "center", opacity: 0.85, fontSize: 14 }}>
+            <section style={{ marginTop: 15, textAlign: "center", opacity: 0.75, fontSize: 15 }}>
                 Attempts left: <b>{attemptsLeft}</b>
             </section>
 
-            {ended && <p style={{ marginTop: 16, color: "crimson", textAlign: "center" }}>{ended}</p>}
+            {ended && <p style={{ marginTop: 15, color: "crimson", textAlign: "center" }}>{ended}</p>}
 
             {state?.status === "ended" && (
                 <div
@@ -306,7 +306,7 @@ export default function GameRoom() {
                         display: "grid",
                         placeItems: "center",
                         zIndex: 100,
-                        padding: 16,
+                        padding: 15,
                     }}
                 >
                     <div
@@ -314,19 +314,19 @@ export default function GameRoom() {
                             width: "min(420px, 100%)",
                             background: "#1f1f1f",
                             color: "white",
-                            borderRadius: 16,
+                            borderRadius: 15,
                             padding: 20,
                             boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
                         }}
                     >
-                        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-                            <h2 style={{ fontSize: 22, fontWeight: 900, margin: 0 }}>Game Over</h2>
-                            <div style={{ fontSize: 12, opacity: 0.7 }}>
+                        <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10 }}>
+                            <h2 style={{ fontSize: 25, fontWeight: 750, margin: 0 }}>Game Over</h2>
+                            <div style={{ fontSize: 13, opacity: 0.7 }}>
                                 Ready: <b>{state?.rematchVotes?.length ?? 0}</b>/2
                             </div>
                         </div>
 
-                        <div style={{ marginTop: 10, marginBottom: 15, opacity: 0.5 }}>
+                        <div style={{ marginTop: 10, marginBottom: 15, opacity: 0.75 }}>
                             {ended ?? "Game ended."}
                             {revealWord && (
                                 <p style={{ marginTop: 10, marginBottom: 5, opacity: 1 }}>
@@ -341,7 +341,7 @@ export default function GameRoom() {
                                 gap: 10,
                                 alignItems: "center",
                                 justifyContent: "space-between",
-                                marginTop: 8,
+                                marginTop: 10,
                             }}
                         >
                             <button
@@ -349,8 +349,8 @@ export default function GameRoom() {
                                 disabled={hasVotedRematch}
                                 style={{
                                     flex: 1,
-                                    padding: "12px 14px",
-                                    borderRadius: 12,
+                                    padding: "13px 15px",
+                                    borderRadius: 10,
                                     border: "1px solid #666",
                                     background: hasVotedRematch ? "#666" : "#111",
                                     color: hasVotedRematch ? "#666" : "white",
@@ -361,13 +361,9 @@ export default function GameRoom() {
                                 {hasVotedRematch ? "Waiting for opponent…" : "Rematch"}
                             </button>
 
-                            <div style={{ fontSize: 12, opacity: 0.75, textAlign: "right", minWidth: 130 }}>
+                            <div style={{ fontSize: 13, opacity: 0.75, textAlign: "right", minWidth: 100 }}>
                                 {hasVotedRematch ? "You are ready " : "Click to vote"}
                             </div>
-                        </div>
-
-                        <div style={{ marginTop: 12, fontSize: 12, opacity: 0.65 }}>
-                            When both players click <b>Rematch</b>, a new word is generated and the board resets.
                         </div>
                     </div>
                 </div>

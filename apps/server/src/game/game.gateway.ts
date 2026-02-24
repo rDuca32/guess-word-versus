@@ -17,7 +17,7 @@ import { wordleFeedback } from "./wordle-feedback";
 type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 type TypedServer = Server<ClientToServerEvents, ServerToClientEvents>;
 
-const GAME_SECONDS = 90;
+const GAME_SECONDS = 60000; // 10 minutes
 
 @WebSocketGateway({
     cors: { origin: true, credentials: true },
@@ -66,7 +66,8 @@ export class GameGateway implements OnGatewayDisconnect {
         if (!name) return socket.emit("error", { message: "Name is required." });
 
         let code = makeRoomCode();
-        while (this.roomManager.getRoom(code)) code = makeRoomCode();
+        while (this.roomManager.getRoom(code))
+            code = makeRoomCode();
 
         const player: Player = {
             id: crypto.randomUUID(),
