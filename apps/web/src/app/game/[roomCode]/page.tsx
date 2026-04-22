@@ -22,34 +22,49 @@ const COLORS: Record<LetterState, string> = {
     absent: "#787c7e",
 };
 
-const KEY_ROWS = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"].map((r) => r.split(""));
+const KEY_ROWS = [
+    ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+    ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
+    ["ENTER", "Z", "X", "C", "V", "B", "N", "M", "⌫"]
+];
 
-function Keyboard({ usedLetters }: { usedLetters: Set<string> }) {
+type KeyboardProps = {
+    usedLetters: Set<string>;
+    onKeyPress: (key: string) => void;
+};
+
+function Keyboard({ usedLetters, onKeyPress }: KeyboardProps) {
     return (
         <div style={{ display: "grid", gap: 5, justifyContent: "center", marginTop: 10 }}>
             {KEY_ROWS.map((row, idx) => (
                 <div key={idx} style={{ display: "flex", gap: 5, justifyContent: "center" }}>
                     {row.map((k) => {
-                        const used = usedLetters.has(k);
+                        const isSpecial = k === "ENTER" || k === "⌫";
+                        const used = usedLetters.has(k) && !isSpecial;
+
                         return (
-                            <div
+                            <button
                                 key={k}
+                                onClick={() => onKeyPress(k)}
                                 style={{
                                     height: 50,
-                                    minWidth: 30,
+                                    minWidth: isSpecial ? 65 : 35,
                                     padding: "10px",
                                     borderRadius: 10,
                                     display: "grid",
                                     placeItems: "center",
                                     fontWeight: 750,
+                                    fontSize: isSpecial ? 12 : 16,
                                     border: "1px solid #222",
                                     background: used ? "#d1d5db" : "#111",
                                     color: used ? "#6b7280" : "white",
                                     userSelect: "none",
+                                    cursor: "pointer",
+                                    appearance: "none"
                                 }}
                             >
                                 {k}
-                            </div>
+                            </button>
                         );
                     })}
                 </div>
@@ -175,6 +190,23 @@ export default function GameRoom() {
         setGuess("");
     };
 
+    const handleVirtualKeyPress = (key: string) => {
+        if (!canPlay || rows.length >= 6) return;
+
+        if (key == "ENTER") {
+            if (guess.length == 5) {
+                submitGuess();
+            }
+        } else if (key == "⌫") {
+            setGuess((prev) => prev.slice(0, -1))
+        } else {
+            if (guess.length < 5) {
+                setGuess((prev) => prev + key)
+            }
+        }
+
+    }
+
     const grid: Array<{ guess: string; feedback: LetterState[] | null; isCurrent?: boolean }> = rows.map((r) => ({
         guess: r.guess,
         feedback: r.feedback,
@@ -289,7 +321,7 @@ export default function GameRoom() {
                 </div>
             </section>
 
-            <Keyboard usedLetters={usedLetters} />
+            <Keyboard usedLetters={usedLetters} onKeyPress={handleVirtualKeyPress} />
 
             <section style={{ marginTop: 15, textAlign: "center", opacity: 0.75, fontSize: 15 }}>
                 Attempts left: <b>{attemptsLeft}</b>

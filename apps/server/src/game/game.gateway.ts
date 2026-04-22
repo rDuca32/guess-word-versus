@@ -17,7 +17,7 @@ import { wordleFeedback } from "./wordle-feedback";
 type TypedSocket = Socket<ClientToServerEvents, ServerToClientEvents>;
 type TypedServer = Server<ClientToServerEvents, ServerToClientEvents>;
 
-const GAME_SECONDS = 60000; // 10 minutes
+const GAME_SECONDS = 300; // 5 minutes
 
 @WebSocketGateway({
     cors: { origin: true, credentials: true },
